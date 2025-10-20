@@ -13,7 +13,21 @@ public class CSVReader
     public static List<Dictionary<string, object>> Read(string file)
     {
         var list = new List<Dictionary<string, object>>();
-        TextAsset data = Resources.Load("MapDatasCSV/" + file) as TextAsset; // Resources의 MapDataCSV로 바꾸기
+
+        // 먼저 MapDatasCSV에서 시도
+        TextAsset data = Resources.Load("MapDatasCSV/" + file) as TextAsset;
+
+        // 없으면 StoryDatasCSV에서 시도
+        if (data == null)
+        {
+            data = Resources.Load("StoryDatasCSV/" + file) as TextAsset;
+        }
+
+        // 여전히 null이면 빈 리스트 반환 (파일 없음)
+        if (data == null)
+        {
+            return list;
+        }
 
         var lines = Regex.Split(data.text, LINE_SPLIT_RE);
 

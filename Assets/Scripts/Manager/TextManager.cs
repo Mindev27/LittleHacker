@@ -5,15 +5,19 @@ using TMPro;
 
 public class TextManager
 {
-    private List<Dictionary<string, object>> deClear_Text;
-    private List<Dictionary<string, object>> clear_Text;
+    // 현재 대화 데이터
     private List<string> currentTexts = new List<string>();
+    private List<int> currentSpeakers = new List<int>();  // TalkNum (화자 구분)
     private int currentTextCount = 0;
-    private int currentSn;
+
+    // 스테이지 클리어 여부
+    private bool isStageCleared;
+
+    // UI 및 출력 제어
     private TMP_Text textPrintBox;
-    private float textPrintSpeed;
-    private bool isPrint;
-    private bool isSkipText;
+    private float textPrintSpeed = 0.1f;
+    private bool isPrint = false;
+    private bool isSkipText = false;
 
     public bool isTalk;
 
@@ -22,60 +26,70 @@ public class TextManager
         isTalk = false;
         isPrint = false;
         isSkipText = false;
-        currentSn = 0;
         currentTextCount = 0;
     }
 
-    private void SetDictionary()
+    // 현재 스테이지 클리어 여부 확인
+    private bool CheckStageCleared()
     {
-        deClear_Text = CSVReader.Read("SN_" + currentSn);
-        clear_Text = CSVReader.Read("SN_" + currentSn + "_Clear");
+        string key = GameManager.currentScenario + "-" + GameManager.currentStage;
+        return PlayerPrefs.HasKey(key);
     }
 
+    // 스토리 텍스트 선택 및 로드
     private bool SelectPrintText()
     {
+        // 이미 로드된 텍스트가 있으면 그대로 사용
         if (currentTexts.Count > 0) return true;
-        if (currentSn != GameManager.currentScenario)   
-        {
-            currentSn = GameManager.currentScenario;
-            SetDictionary();
-        }
 
+        // 클리어 여부 확인
+        isStageCleared = CheckStageCleared();
+
+        // 스테이지 ID 생성
+        string stageId = "SN_" + GameManager.currentScenario + "_ST_" + GameManager.currentStage;
+
+        List<Dictionary<string, object>> storyData = null;
+
+        // 시작 or 클리어에 따라 다른 파일 로드
         if (!GameManager.isClear)
         {
-            for (int count = 0; count < deClear_Text.Count; count++)
-            {
-                if (deClear_Text[count]["Stage"].ToString() == GameManager.currentStage.ToString())
-                {
-                    currentTexts.Add(deClear_Text[count]["Talk"].ToString());
-                }
-            }
+            // 시작 텍스트 로드
+            storyData = CSVReader.Read(stageId + "_Start");
         }
-
         else
         {
-            for (int count = 0; count < clear_Text.Count; count++)
-            {
-                if (clear_Text[count]["Stage"].ToString() == GameManager.currentStage.ToString())
-                {
-                    currentTexts.Add(clear_Text[count]["Talk"].ToString());
-                }
-            }
+            // 클리어 텍스트 로드
+            storyData = CSVReader.Read(stageId + "_End");
         }
 
-        if (currentTexts.Count == 0) return false;
-        else return true; 
+        // 데이터가 없거나 비어있으면 스토리 없음
+        if (storyData == null || storyData.Count == 0)
+        {
+            return false;  // 스토리 없이 바로 진행
+        }
+
+        // 텍스트와 화자 정보 추출
+        for (int i = 0; i < storyData.Count; i++)
+        {
+            currentTexts.Add(storyData[i]["Talk"].ToString());
+            currentSpeakers.Add(int.Parse(storyData[i]["TalkNum"].ToString()));
+        }
+
+        return true;
     }
 
+    // 대화 시작
     public bool StartTalk(bool isSkip = false, float TextPrintSpeed = 0.1f)
     {
         textPrintSpeed = TextPrintSpeed;
+
         if (isSkipText)
         {
             ClearTextBox();
             return false;
         }
 
+        // 텍스트 선택 (없으면 false 반환)
         if (!SelectPrintText())
         {
             ClearTextBox();
@@ -84,7 +98,8 @@ public class TextManager
 
         isTalk = true;
 
-        if (textPrintBox == null) textPrintBox = GameObject.Find("TalkText").GetComponent<TMP_Text>();
+        if (textPrintBox == null)
+            textPrintBox = GameObject.Find("TalkText").GetComponent<TMP_Text>();
 
         if (isSkip)
         {
@@ -92,16 +107,42 @@ public class TextManager
             isSkipText = true;
             return false;
         }
-        if(!isPrint) CoroutineHelper.StartCoroutine(printText());
-        else textPrintSpeed = 0;
+
+        if (!isPrint)
+            CoroutineHelper.StartCoroutine(printText());
+        else
+            textPrintSpeed = 0;  // 즉시 완성
+
         return true;
     }
 
+    // 터치 입력 처리
+    public void OnTouch()
+    {
+        if (!isTalk) return;  // 대화 중이 아니면 무시
+
+        if (isPrint)  // 텍스트 출력 중
+        {
+            if (isStageCleared)  // 클리어한 스테이지만 즉시 완성
+            {
+                textPrintSpeed = 0;
+            }
+            // 클리어 안한 스테이지는 아무것도 안함 (끝까지 기다려야 함)
+        }
+        else  // 텍스트 출력 완료
+        {
+            // 다음 대사 또는 종료
+            StartTalk();
+        }
+    }
+
+    // 텍스트 박스 초기화
     public void ClearTextBox()
     {
         isSkipText = false;
         isTalk = false;
-        textPrintBox.text = "";
+        if (textPrintBox != null) textPrintBox.text = "";
+
         if (GameManager.isClear)
         {
             GameManager.isClear = false;
@@ -109,29 +150,49 @@ public class TextManager
         }
     }
 
+    // 텍스트 출력 코루틴
     IEnumerator printText()
     {
         isPrint = true;
         textPrintBox.text = "";
-        int count = 0;
-        string text = currentTexts[currentTextCount].ToString();
 
-        while (count != text.Length)
+        string text = currentTexts[currentTextCount].ToString();
+        int speaker = currentSpeakers[currentTextCount];
+
+        // TODO: 나중에 화자별 색상 처리
+        // if (speaker == 0) textPrintBox.color = Color.white;
+        // else if (speaker == 1) textPrintBox.color = Color.cyan;
+
+        int charIndex = 0;
+
+        while (charIndex < text.Length)
         {
-            if (count < text.Length)
+            // 즉시 완성 모드 (textPrintSpeed가 0으로 변경됨)
+            if (textPrintSpeed == 0)
             {
-                textPrintBox.text += text[count].ToString();
-                count++;
+                textPrintBox.text = text;
+                break;
             }
+
+            textPrintBox.text += text[charIndex].ToString();
+            charIndex++;
+
             yield return new WaitForSeconds(textPrintSpeed);
         }
+
+        // 다음 대사로
         currentTextCount++;
+
+        // 모든 대사 출력 완료
         if (currentTexts.Count == currentTextCount)
         {
             currentTexts.Clear();
+            currentSpeakers.Clear();
             currentTextCount = 0;
             isSkipText = true;
         }
+
         isPrint = false;
+        textPrintSpeed = 0.1f;  // 속도 리셋
     }
 }
