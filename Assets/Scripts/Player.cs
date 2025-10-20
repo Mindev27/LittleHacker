@@ -10,38 +10,29 @@ using System.Xml;
 using UnityEngine.SceneManagement;
 using LittleRay;
 
-// µÇµ¹¸®±â ¶§ »ç¿ëÇÏ´Â Å¬·¡½º
+// Full map state snapshot for undo
 public class revertObject
 {
-    // »óÈ£ÀÛ¿ëÇÏ´Â ¿ÀºêÁ§Æ®ÀÇ À¯Çü enumÀ» »ç¿ëÇØ µÇµ¹¸®±â¶§ »ç¿ëÇØ¾ßÇÏ´Â µ¥ÀÌÅÍ ±¸ºĞ
-    public enum ERevertType {formula, box};
-    // µÇµ¹·Á¿©¾ßÇÏ´Â ¿ÀºêÁ§Æ® ¸®½ºÆ®¾÷
-    public List<GameObject> objects = new List<GameObject>();
-    public List<Vector2> transforms = new List<Vector2>();
-    public List<ERevertType> revertTypes = new List<ERevertType>();
-    // ÀÌµ¿ÇÏ±â Àü ÇÃ·¹ÀÌ¾î À§Ä¡ Á¤º¸ ´ã¾ÆµÎ±â
+    // Player state
     public Vector2 playerPos;
-    public bool formulaCalcule = false;
+    public int formulaCount;
+    public Dictionary<int, ObjectData> formula = new Dictionary<int, ObjectData>();
+    public int formulaTotalNum;
 
-    public revertObject(List<GameObject> objects, List<Vector2> transforms, List<ERevertType> revertTypes, Vector2 playerPos, bool formulaCalcule)
-    {
-        this.objects = objects;
-        this.transforms = transforms;
-        this.revertTypes = revertTypes;
-        this.playerPos = playerPos;
-        this.formulaCalcule = formulaCalcule;
-    }
+    // All numbers state (GameObject -> value)
+    public Dictionary<GameObject, int> allNumbersState = new Dictionary<GameObject, int>();
 
-    public revertObject()
-    {
-        return;
-    }
+    // All objects active state (GameObject -> active)
+    public Dictionary<GameObject, bool> objectsActiveState = new Dictionary<GameObject, bool>();
+
+    // Box positions
+    public Dictionary<GameObject, Vector2> boxPositions = new Dictionary<GameObject, Vector2>();
 }
 
 
 public class Player : MonoBehaviour
 {
-    // È­¸é ÅÍÄ¡ ÇÔ¼ö
+    // È­ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½Ô¼ï¿½
     public enum ETouchState { None, Begin, Move, End };
     public ETouchState playerTouch = ETouchState.None;
     private Vector2 touchPosition = new Vector2(0, 0);
@@ -50,20 +41,19 @@ public class Player : MonoBehaviour
     private Vector2 calculMoveDir = new Vector2(0, 0);
     public List<Vector2> moveDirs = new List<Vector2>();
 
-    // ÀÏ´Ü ÀÎ°ÔÀÓ Player º¯¼ö
+    // ï¿½Ï´ï¿½ ï¿½Î°ï¿½ï¿½ï¿½ Player ï¿½ï¿½ï¿½ï¿½
     public float playerMoveSpeed;
     private bool moveStart = false;
+    private bool snapshotSavedThisTurn = false;  // ì´ë²ˆ í„´ì— ìŠ¤ëƒ…ìƒ· ì €ì¥ ì™„ë£Œ ì—¬ë¶€
 
-    // key = ÁøÇàÇÑ ÅÏ, value Å¬·¡½º
+    // Undo system: stores map snapshots per turn
     public Dictionary<int, revertObject> backUpRevert = new Dictionary<int, revertObject>();
-    public revertObject revertObjects = new revertObject();
 
-    // ¼ö½Ä º¯¼ö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     public Dictionary<int, ObjectData> formula = new Dictionary<int, ObjectData>();
     public TMP_Text[] formulaUi = new TMP_Text[3];
     public int formulaTotalNum = 0;
     private int formulaCount = 0;
-    private bool formulaCalculate = false;
 
     public GameManager gameManager;
 
@@ -76,14 +66,14 @@ public class Player : MonoBehaviour
     public void Update()
     {
         TouchSetup();
-        // ´ëÈ­ ½ÃÀÛÇßÀ» °æ¿ì ÇÃ·¹ÀÌ¾î ±â¹° ¿òÁ÷ÀÓ ¸ØÃß±â º®±îÁö ÀÌµ¿ o
+        // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½â¹° ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ß±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ o
         if (!Managers.Text.isTalk)
         {
             PlayerMoveDIr();
             MoveKeyBind();
         }
         
-        // ÀÓ½Ã Å° ¹ÙÀÎµå ÃßÈÄ »èÁ¦ ¿¹Á¤
+        // ï¿½Ó½ï¿½ Å° ï¿½ï¿½ï¿½Îµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (Input.GetKeyDown(KeyCode.Q))
         {
             CheckFormula();
@@ -95,7 +85,7 @@ public class Player : MonoBehaviour
         if (moveDirs.Count != 0) PlayerMove();
     }
 
-    // ÃÊ±â ½ÃÀÛ½Ã µ¥ÀÌÅÍ ³Ö¾îÁÖ±â
+    // ï¿½Ê±ï¿½ ï¿½ï¿½ï¿½Û½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¾ï¿½ï¿½Ö±ï¿½
     private void InputGameObject()
     {
         gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
@@ -111,7 +101,7 @@ public class Player : MonoBehaviour
         GameObject.Find("HomeButton").GetComponent<Button>().onClick.AddListener(() => HomeButtonClick());
     }
 
-    // ÃÊ±â ¸®¼ÂÇÔ¼ö ½ºÅ×ÀÌÁö°¡ º¯°æµÉ¶§¸¶´Ù »ç¿ëÇØÁÙ ¿¹Á¤
+    // ï¿½Ê±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½É¶ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     public void Initialized()
     {
         formula.Clear();
@@ -120,9 +110,11 @@ public class Player : MonoBehaviour
         formulaUi[2].text = "";
         formulaTotalNum = 0;
         backUpRevert.Clear();
+        GameManager.playerTurn = 0;
+        snapshotSavedThisTurn = false;  // í”Œë˜ê·¸ ì´ˆê¸°í™”
     }
 
-    // È­¸é ÅÍÄ¡ ÇÔ¼ö ¸¶¿ì½º Å¬¸¯¿¡ µû¶ó playerTouch º¯°æ
+    // È­ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ì½º Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ playerTouch ï¿½ï¿½ï¿½ï¿½
     void TouchSetup()
     {
 #if UNITY_EDITOR
@@ -146,7 +138,7 @@ public class Player : MonoBehaviour
 #endif
     }
 
-    // Å°º¸µå Å×½ºÆ® È¯°æ ÇÔ¼ö ÃßÈÄ »èÁ¦ ¿¹Á¤
+    // Å°ï¿½ï¿½ï¿½ï¿½ ï¿½×½ï¿½Æ® È¯ï¿½ï¿½ ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     void MoveKeyBind()
     {
         if (playerTouch == ETouchState.None)
@@ -155,29 +147,21 @@ public class Player : MonoBehaviour
             {
                 moveStart = true;
                 moveDirs.Add(new Vector2(0, 1));
-                formulaCalculate = false;
-                revertObjects.playerPos = transform.position;
             }
             if (Input.GetKeyDown(KeyCode.A))
             {
                 moveStart = true;
                 moveDirs.Add(new Vector2(-1, 0));
-                formulaCalculate = false;
-                revertObjects.playerPos = transform.position;
             }
             if (Input.GetKeyDown(KeyCode.S))
             {
                 moveStart = true;
                 moveDirs.Add(new Vector2(0, -1));
-                formulaCalculate = false;
-                revertObjects.playerPos = transform.position;
             }
             if (Input.GetKeyDown(KeyCode.D))
             {
                 moveStart = true;
                 moveDirs.Add(new Vector2(1, 0));
-                formulaCalculate = false;
-                revertObjects.playerPos = transform.position;
             }
         }
     }
@@ -207,27 +191,33 @@ public class Player : MonoBehaviour
                 calculMoveDir.Normalize();
                 moveDirs.Add(calculMoveDir);
                 moveStart = true;
-                formulaCalculate = false;
-                revertObjects.playerPos = transform.position;
             }
         }
     }
 
-    // player°¡ ¿òÁ÷ÀÏ ¶§ º®¿¡ °¡·Î¸·Èû ÆÇÁ¤¿¡ ´ëÇØ °è»ê
+    // playerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Î¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
     void PlayerMove()
     {
-        // layerMask¿¡ µû¶ó º®Ã³¸®·Î ÇØÁà¾ßÇÏ´Â ¹İ°æ °è»ê
+        // layerMaskï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½İ°ï¿½ ï¿½ï¿½ï¿½
         int layerMask = (1 << LayerMask.NameToLayer("Wall")) + (1 << LayerMask.NameToLayer("Item"));
         moveDir = moveDirs[0];
-        PlayerGetItem();
-        RaycastHit2D hitWall = Physics2D.Raycast(transform.position, moveDir, 0.6f, layerMask); // º®
-        RaycastHit2D hitDoor = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Door")); // ¹®
-        RaycastHit2D hitTrigger = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Trigger")); // ¹Ú½º
 
-        // player°¡ ½ÇÁ¦·Î ¿òÁ÷ÀÌ°Ô ÇÏ´Â ÁÙ
+        // ì´ë™ ì‹œì‘ ì‹œ ìŠ¤ëƒ…ìƒ· ì €ì¥ (ë”± í•œ ë²ˆë§Œ)
+        if (moveStart == true && !snapshotSavedThisTurn)
+        {
+            SaveMapSnapshot();
+            snapshotSavedThisTurn = true;  // ì €ì¥ ì™„ë£Œ í‘œì‹œ
+        }
+
+        PlayerGetItem();
+        RaycastHit2D hitWall = Physics2D.Raycast(transform.position, moveDir, 0.6f, layerMask); // ï¿½ï¿½
+        RaycastHit2D hitDoor = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Door")); // ï¿½ï¿½
+        RaycastHit2D hitTrigger = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Trigger")); // ï¿½Ú½ï¿½
+
+        // playerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì°ï¿½ ï¿½Ï´ï¿½ ï¿½ï¿½
         transform.Translate(moveDir * playerMoveSpeed * Time.deltaTime);
 
-        // box¿Í ºÎµúÃÆÀ» ¶§ »ı±â´Â ½ºÅ©¸³Æ®
+        // boxï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å©ï¿½ï¿½Æ®
         if (hitTrigger)
         {
             if (hitTrigger.transform.tag == "Box" && moveStart == true)
@@ -244,7 +234,6 @@ public class Player : MonoBehaviour
                 {
                     if (box.boxTrigger == false)
                     {
-                        InputRevertObject(hitTrigger.transform.gameObject);
                         box.boxMoveDir = moveDir;
                         box.boxTrigger = true;
                     }
@@ -254,7 +243,7 @@ public class Player : MonoBehaviour
 
         if (hitWall)
         {
-            // º® Ã³¸®
+            // ï¿½ï¿½ Ã³ï¿½ï¿½
             if (hitWall.transform.tag == "Wall" || hitWall.transform.tag == "Operator" && formulaCount % 3 != 1 || hitWall.transform.tag == "Number" && formulaCount % 3 == 1)
             {
                 moveStart = false;
@@ -262,7 +251,7 @@ public class Player : MonoBehaviour
             }
         }
 
-        // µµÂøÁöÁ¡¿¡ µµ´ŞÇßÀ» ¶§ Á¶°ÇÀÌ ÃæÁ·µÇÁö ¾Ê¾ÒÀ» °æ¿ì
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
         if (hitDoor)
         {
             if (hitDoor.transform.GetComponent<ObjectData>().num != formulaTotalNum || formulaCount % 3 != 1)
@@ -272,23 +261,18 @@ public class Player : MonoBehaviour
             }
         }
 
-        // °¡Àå ¸¶Áö¸·¿¡ À§Ä¡ÇØ¾ßÇÏ´Â ÇÔ¼ö ÃßÈÄ ¼öÁ¤ÇÒ ¿¹Á¤ player move Initializer¶ó°í »ı°¢ÇÏ¸é µÊ
+        // Turn ended
         if (moveStart == false)
         {
-            backUpRevert.Add(GameManager.playerTurn, new revertObject(revertObjects.objects.ToList(), revertObjects.transforms.ToList(), revertObjects.revertTypes.ToList(), revertObjects.playerPos, formulaCalculate));
             GameManager.playerTurn++;
-            formulaCalculate = false;
             moveStart = true;
+            snapshotSavedThisTurn = false;  // ë‹¤ìŒ í„´ì„ ìœ„í•´ í”Œë˜ê·¸ ë¦¬ì…‹
             moveDirs.RemoveAt(0);
-            revertObjects.objects.Clear();
-            revertObjects.transforms.Clear();
-            revertObjects.revertTypes.Clear();
-            revertObjects.playerPos = transform.position;
         }
 
     }
 
-    // player°¡ ¼ö½ÄµéÀ» ¾ò¾úÀ» °æ¿ì ¶Ç´Â ¹®¿¡ ´ê¾ÒÀ» °æ¿ì¸¦ ³ª´²¼­ °è»ê ¼ö½Äµé¸¸ ³Ö¾îµÎ´Â ½ÄÀ¸·Î
+    // playerï¿½ï¿½ ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ì¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Äµé¸¸ ï¿½Ö¾ï¿½Î´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void PlayerGetItem()
     {
         int layerMask = (1 << LayerMask.NameToLayer("Item")) + (1 << LayerMask.NameToLayer("Door"));
@@ -297,10 +281,18 @@ public class Player : MonoBehaviour
         if (hitItem)
         {
             ObjectData OD = hitItem.transform.GetComponent<ObjectData>();
-            // ¸ÔÀº ¿ÀºêÁ§Æ®°¡ ¼ıÀÚÀÏ °æ¿ì
-            if (hitItem.transform.tag == "Number" && formulaCount % 3 == 0 || formulaCount % 3 == 2)
+
+            // AllOperator ì²˜ë¦¬ (ë§µì˜ ëª¨ë“  ìˆ«ìì— ì—°ì‚° ì ìš©)
+            if (hitItem.transform.tag == "AllOperator")
             {
-                InputRevertObject(hitItem.transform.gameObject);
+                ApplyAllOperator(OD.oper, OD.num);
+                hitItem.transform.gameObject.SetActive(false);
+                return;
+            }
+
+            // Number item
+            else if (hitItem.transform.tag == "Number" && formulaCount % 3 == 0 || formulaCount % 3 == 2)
+            {
                 formula.Add(formulaCount, OD);
                 formulaUi[formulaCount % 3].text = "" + OD.num;
                 if (formulaCount % 3 == 0) formulaTotalNum = formula[formulaCount].num;
@@ -308,10 +300,9 @@ public class Player : MonoBehaviour
                 hitItem.transform.gameObject.SetActive(false);
             }
 
-            // ¸ÔÀº ¿ÀºêÁ§Æ®°¡ ¿¬»êÀÚÀÏ °æ¿ì
+            // Operator item
             else if (hitItem.transform.tag == "Operator" && formulaCount % 3 == 1)
             {
-                InputRevertObject(hitItem.transform.gameObject);
                 formula.Add(formulaCount, OD);
                 formulaUi[1].text = OD.oper;
                 formulaCount++;
@@ -333,10 +324,16 @@ public class Player : MonoBehaviour
                 }
             }
 
-            // ¼ö½Ä¶õ¿¡ ¸ğµç Ä­ÀÌ ´Ù Ã¤¿öÁ® ÀÖ´Â °æ¿ì °»½Å
+            // Trap ì²˜ë¦¬ - ë°Ÿìœ¼ë©´ ìŠ¤í…Œì´ì§€ ì¬ì‹œì‘
+            else if(hitItem.transform.tag == "Trap")
+            {
+                gameManager.GetComponent<MapCreate>().RestartStage();
+                return;
+            }
+
+            // ï¿½ï¿½ï¿½Ä¶ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ä­ï¿½ï¿½ ï¿½ï¿½ Ã¤ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             if(formulaCount % 3 == 0)
             {
-                formulaCalculate = true;
                 PlayerCalculate();
             }
         }
@@ -346,7 +343,7 @@ public class Player : MonoBehaviour
         }
     }
 
-    // ¼ö½Ä °è»ê ¼ıÀÚ + ¿¬»êÀÚ + ¼ıÀÚ ¼ø¼­·Î ¼ö½ÄÀÌ »ı°åÀ» ¶§ °è»êÇØÁÖ´Â ÇÔ¼ö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ ï¿½Ô¼ï¿½
     void PlayerCalculate()
     {
         formula.Add(formulaCount, gameObject.AddComponent<ObjectData>());
@@ -365,10 +362,10 @@ public class Player : MonoBehaviour
                 formula[formulaCount].num = formula[formulaCount - 3].num * formula[formulaCount - 1].num;
                 break;
             default:
-                Debug.LogError("Playe.cs ÆÄÀÏ Áß PlayerCalculate ¿À·ù ÇØ´ç ¿¬»êÀÚ ¾øÀ½");
+                Debug.LogError("Playe.cs ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ PlayerCalculate ï¿½ï¿½ï¿½ï¿½ ï¿½Ø´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½");
                 break;
         }
-        // ¼ö½Ä ÃÊ±âÈ­
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­
         formulaUi[0].text = "" + formula[formulaCount].num;
         formulaUi[1].text = "";
         formulaUi[2].text = "";
@@ -377,7 +374,7 @@ public class Player : MonoBehaviour
         formulaCount++;
     }
 
-    // µğ¹ö±×¿ë ÇÔ¼ö
+    // Debug formula check
     void CheckFormula()
     {
         for(int count = 0; count < formulaCount; count++)
@@ -387,91 +384,198 @@ public class Player : MonoBehaviour
         }
     }
 
+    // Save full map state snapshot
+    void SaveMapSnapshot()
+    {
+        revertObject snapshot = new revertObject();
+
+        // Save player state
+        snapshot.playerPos = transform.position;
+        snapshot.formulaCount = this.formulaCount;
+        snapshot.formula = new Dictionary<int, ObjectData>(this.formula);
+        snapshot.formulaTotalNum = this.formulaTotalNum;
+
+        // Save all numbers state
+        GameObject[] allNumbers = GameObject.FindGameObjectsWithTag("Number");
+        foreach (GameObject numberObj in allNumbers)
+        {
+            ObjectData data = numberObj.GetComponent<ObjectData>();
+            snapshot.allNumbersState[numberObj] = data.num;
+            snapshot.objectsActiveState[numberObj] = numberObj.activeSelf;
+        }
+
+        // Save all operators state
+        GameObject[] allOperators = GameObject.FindGameObjectsWithTag("Operator");
+        foreach (GameObject opObj in allOperators)
+        {
+            snapshot.objectsActiveState[opObj] = opObj.activeSelf;
+        }
+
+        // Save all AllOperators state
+        GameObject[] allAllOperators = GameObject.FindGameObjectsWithTag("AllOperator");
+        foreach (GameObject allOpObj in allAllOperators)
+        {
+            snapshot.objectsActiveState[allOpObj] = allOpObj.activeSelf;
+        }
+
+        // Save box positions
+        GameObject[] allBoxes = GameObject.FindGameObjectsWithTag("Box");
+        foreach (GameObject boxObj in allBoxes)
+        {
+            snapshot.boxPositions[boxObj] = boxObj.transform.position;
+        }
+
+        backUpRevert[GameManager.playerTurn] = snapshot;
+        Debug.Log($"Map snapshot saved for turn {GameManager.playerTurn}");
+    }
+
+    // all operator ì—°ì‚° ì ìš© í•¨ìˆ˜
+    void ApplyAllOperator(string oper, int value)
+    {
+        // ì”¬ì— ìˆëŠ” ëª¨ë“  ìˆ«ì ì•„ì´í…œ ì°¾ê¸°
+        GameObject[] allNumbers = GameObject.FindGameObjectsWithTag("Number");
+
+        int affectedCount = 0;
+        foreach (GameObject numberObj in allNumbers)
+        {
+            // ì´ë¯¸ ìˆ˜ì§‘ëœ ì•„ì´í…œ(ë¹„í™œì„±í™”ëœ ê²ƒ)ì€ ì—°ì‚° ì ìš©í•˜ì§€ ì•ŠìŒ
+            if (!numberObj.activeSelf) continue;
+
+            ObjectData numberData = numberObj.GetComponent<ObjectData>();
+            int originalValue = numberData.num;
+
+            // ì—°ì‚°ìì— ë”°ë¼ ê³„ì‚°
+            switch (oper)
+            {
+                case "+":
+                    numberData.num += value;
+                    break;
+                case "-":
+                    numberData.num -= value;
+                    break;
+                case "*":
+                    numberData.num *= value;
+                    break;
+                case "/":
+                    if (value != 0)
+                        numberData.num /= value;
+                    else
+                        Debug.LogWarning("AllOperator: Division by zero");
+                    break;
+                default:
+                    Debug.LogError($"AllOperator: Unknown operator '{oper}'");
+                    break;
+            }
+
+            // UI í…ìŠ¤íŠ¸ ì—…ë°ì´íŠ¸
+            TMP_Text numberText = numberObj.transform.GetChild(0).GetComponent<TMP_Text>();
+            numberText.text = numberData.num.ToString();
+
+            affectedCount++;
+            Debug.Log($"AllOperator: Changed number from {originalValue} to {numberData.num}");
+        }
+
+        Debug.Log($"AllOperator {oper}{value} applied to {affectedCount} numbers");
+    }
+
     void HomeButtonClick()
     {
         SceneManager.LoadScene(1);
     }
 
-    // ¾À ´Ù½Ã ¸®·Îµå Initialize ½ÇÇàÇØ¾ßÇÔ
+    // ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½Îµï¿½ Initialize ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½ï¿½
     void ReStartButtonClick()
     {
         GameObject.Find("GameManager").GetComponent<MapCreate>().Initialize("SN_" + GameManager.currentScenario.ToString() + "_ST_" + GameManager.currentStage.ToString());
         Initialized();
     }
 
-    // µÇµ¹¸®±â ¹öÆ°À» ´­·¶À» ¶§ class enum¿¡ ¸Â°Ô ÇÔ¼ö ½ÇÇà µÇ°Ô ¸¸µé¾î¾ßÇÔ
+    // Restore full map state from snapshot
     void BackStartButtonClick()
     {
-        if(backUpRevert.Count != 0)
+        // ì´ë™ ì¤‘ì¼ ë•ŒëŠ” Undo ë¶ˆê°€ (ì™„ì „íˆ ë©ˆì·„ì„ ë•Œë§Œ ê°€ëŠ¥)
+        if (moveDirs.Count > 0)
         {
-            revertObject revertObj = backUpRevert[GameManager.playerTurn - 1];
-            transform.position = revertObj.playerPos;
+            Debug.LogWarning("Cannot undo while moving!");
+            return;
+        }
 
-            for (int count = 0; count < revertObj.revertTypes.Count; count++)
+        if(backUpRevert.Count == 0 || GameManager.playerTurn == 0) return;
+
+        // Safety check: ensure snapshot exists
+        if (!backUpRevert.ContainsKey(GameManager.playerTurn - 1))
+        {
+            Debug.LogWarning($"Undo failed: No snapshot for turn {GameManager.playerTurn - 1}");
+            return;
+        }
+
+        revertObject snapshot = backUpRevert[GameManager.playerTurn - 1];
+
+        // Restore player state
+        transform.position = snapshot.playerPos;
+        this.formulaCount = snapshot.formulaCount;
+        this.formula = new Dictionary<int, ObjectData>(snapshot.formula);
+        this.formulaTotalNum = snapshot.formulaTotalNum;
+
+        // Restore formula UI - show current formula in progress
+        int currentFormulaBase = (snapshot.formulaCount / 3) * 3;  // Current formula start index
+        for(int i = 0; i < 3; i++)
+        {
+            int formulaIndex = currentFormulaBase + i;
+            if(formulaIndex < snapshot.formulaCount && snapshot.formula.ContainsKey(formulaIndex))
             {
-                Debug.Log("iter : " + count);
-                switch (revertObj.revertTypes[count])
-                {
-                    // ¼ö½Ä ÇÔ¼ö´Â ±âÁ¸ active »óÅÂ¸¦ º¯°æ
-                    case revertObject.ERevertType.formula:
-                        revertObj.objects[count].SetActive(true);
-                        formulaCount--;
-                        formula.Remove(formulaCount);
-                        formulaUi[formulaCount % 3].text = "";
-                        Debug.Log("formula BackUp");
-                        break;
-
-                    // ¹Ú½º´Â transform¸¸ ¿òÁ÷ÀÓ
-                    case revertObject.ERevertType.box:
-                        revertObj.objects[count].transform.position = revertObj.transforms[count];
-                        Debug.Log("box BackUp");
-                        break;
-                }
-            }
-
-            // ¼ö½Ä °è»êÀÌ µÆÀ» °æ¿ì ¿¹¿ÜÃ³¸®
-            if (revertObj.formulaCalcule)
-            {
-                formulaCount--;
-                formula.Remove(formulaCount);
-            }
-
-            int currentCount = formulaCount - 1;
-
-            // ¼ö½Ä Ui °»½Å
-            for(int count = 0; count <= currentCount % 3; count++)
-            {
-                if(currentCount % 3 - count == 1)
-                {
-                    formulaUi[currentCount % 3 - count].text = formula[currentCount - count].oper;
-                }
+                if(i == 1)
+                    formulaUi[i].text = snapshot.formula[formulaIndex].oper;
                 else
-                {
-                    formulaUi[currentCount % 3 - count].text = "" + formula[currentCount - count].num;
-                }
+                    formulaUi[i].text = snapshot.formula[formulaIndex].num.ToString();
             }
-
-            backUpRevert.Clear();
+            else
+            {
+                formulaUi[i].text = "";
+            }
         }
-    }
 
-    // revertObject µ¥ÀÌÅ¸ ÀÎÇ² ÇÔ¼ö
-    void InputRevertObject(GameObject hit)
-    {
-        revertObjects.objects.Add(hit);
-        revertObjects.transforms.Add(hit.transform.position);
-
-        switch (hit.transform.tag)
+        // Restore all numbers
+        foreach(var pair in snapshot.allNumbersState)
         {
-            case "Number":
-                revertObjects.revertTypes.Add(revertObject.ERevertType.formula);
-                break;
-            case "Operator":
-                revertObjects.revertTypes.Add(revertObject.ERevertType.formula);
-                break;
-            case "Box":
-                revertObjects.revertTypes.Add(revertObject.ERevertType.box);
-                break;
+            GameObject numberObj = pair.Key;
+            int value = pair.Value;
+            if(numberObj != null)
+            {
+                numberObj.GetComponent<ObjectData>().num = value;
+                numberObj.transform.GetChild(0).GetComponent<TMP_Text>().text = value.ToString();
+            }
         }
+
+        // Restore all objects active state
+        foreach(var pair in snapshot.objectsActiveState)
+        {
+            GameObject obj = pair.Key;
+            bool active = pair.Value;
+            if(obj != null)
+            {
+                obj.SetActive(active);
+            }
+        }
+
+        // Restore box positions
+        foreach(var pair in snapshot.boxPositions)
+        {
+            GameObject boxObj = pair.Key;
+            Vector2 pos = pair.Value;
+            if(boxObj != null)
+            {
+                boxObj.transform.position = pos;
+            }
+        }
+
+        GameManager.playerTurn--;
+        backUpRevert.Remove(GameManager.playerTurn);
+
+        // Clear remaining move commands to prevent unintended actions
+        moveDirs.Clear();
+        moveStart = false;
+
+        Debug.Log($"Map restored to turn {GameManager.playerTurn}");
     }
 }

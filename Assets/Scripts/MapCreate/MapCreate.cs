@@ -62,12 +62,18 @@ public class MapCreate : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.R))
         {
-            stageInfo = "SN_" + GameManager.currentScenario.ToString() + "_ST_" + GameManager.currentStage.ToString();
-
-            Initialize(stageInfo);
-            player.Initialized();
-            Managers.Text.StartTalk(true);
+            RestartStage();
         }
+    }
+
+    // 스테이지 재시작 (R키 또는 Trap에 의해 호출)
+    public void RestartStage()
+    {
+        stageInfo = "SN_" + GameManager.currentScenario.ToString() + "_ST_" + GameManager.currentStage.ToString();
+
+        Initialize(stageInfo);
+        player.Initialized();
+        Managers.Text.StartTalk(true);
     }
 
     // Json파일 가져오기
