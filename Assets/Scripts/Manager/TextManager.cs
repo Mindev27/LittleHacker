@@ -83,6 +83,10 @@ public class TextManager
     {
         textPrintSpeed = TextPrintSpeed;
 
+        // textPrintBox 초기화를 제일 먼저 실행 (ClearTextBox 호출 전에 필요)
+        if (textPrintBox == null)
+            textPrintBox = GameObject.Find("TalkText").GetComponent<TMP_Text>();
+
         if (isSkipText)
         {
             ClearTextBox();
@@ -97,9 +101,6 @@ public class TextManager
         }
 
         isTalk = true;
-
-        if (textPrintBox == null)
-            textPrintBox = GameObject.Find("TalkText").GetComponent<TMP_Text>();
 
         if (isSkip)
         {
