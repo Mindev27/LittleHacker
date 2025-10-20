@@ -6,29 +6,29 @@ using Newtonsoft.Json;
 
 public class MakeJsonMapData : MonoBehaviour
 {   
-    private string csvDirectoryPath;     // CSV ÆÄÀÏµéÀÌ ÀÖ´Â Æú´õ °æ·Î
-    private string jsonDirectoryPath;    // JSON ÆÄÀÏµéÀ» ÀúÀåÇÒ Æú´õ °æ·Î
+    private string csvDirectoryPath;     // CSV ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+    private string jsonDirectoryPath;    // JSON ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 
     void Start()
     {
         csvDirectoryPath = "Assets/Resources/MapDatasCSV";
         jsonDirectoryPath = "Assets/Resources/MapDatasJSON";
 
-        InitializeJsonData(); // Á¸ÀçÇÏ´Â Json ÆÄÀÏµé Áö¿ì±â (ÇÊ¿äÇÏ¸é ÁÖ¼® Ã³¸®)
+        InitializeJsonData(); // ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ Json ï¿½ï¿½ï¿½Ïµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½Ê¿ï¿½ï¿½Ï¸ï¿½ ï¿½Ö¼ï¿½ Ã³ï¿½ï¿½)
 
-        // µð·ºÅä¸®¿¡¼­ ¸ðµç CSV ÆÄÀÏ ¸ñ·ÏÀ» °¡Á®¿À±â
+        // ï¿½ï¿½ï¿½ä¸®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ CSV ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         string[] csvFiles = Directory.GetFiles(csvDirectoryPath, "*.csv");
 
         foreach (string csvFile in csvFiles)
         {
             // Debug.Log("csvFile: " + csvFile);
 
-            // ÆÄÀÏÀÇ ÀüÃ¼ °æ·Î¿¡¼­ ÆÄÀÏ ÀÌ¸§¸¸ ÃßÃâ (È®ÀåÀÚ Á¦¿Ü)
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ ï¿½ï¿½Î¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (È®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
             string fileName = csvFile.Split('\\')[1].Split('.')[0];
 
             // Debug.Log("CSV File Name: " + fileName);
 
-            // JSON ÆÄÀÏÀÇ ¿ÏÀüÇÑ °æ·Î »ý¼º
+            // JSON ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             string jsonFilePath = jsonDirectoryPath + "/" + fileName + ".json";
 
             // Debug.Log("JSON File Name: " + jsonFilePath);
@@ -37,7 +37,7 @@ public class MakeJsonMapData : MonoBehaviour
         }
     }
 
-    // JSON ÆÄÀÏµéÀÌ ÀúÀåµÈ Æú´õÀÇ ¸ðµç ÆÄÀÏÀ» Áö¿ì±â
+    // JSON ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
     void InitializeJsonData()
     {
         
@@ -47,17 +47,17 @@ public class MakeJsonMapData : MonoBehaviour
             foreach (string file in files)
             {
                 File.Delete(file);
-                Debug.Log("DoneFileDelete : " + file); // Àû´Â°Ô ´À·Á¼­ È®ÀÎÇÏ´Â ÄÚµå
+                Debug.Log("DoneFileDelete : " + file); // ï¿½ï¿½ï¿½Â°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½Úµï¿½
             }
         }
     }
 
     void SaveMapDataToJson(string csvFilePath, string jsonFilePath)
     {
-        // CSV ÆÄÀÏ ÀÐ±â
+        // CSV ï¿½ï¿½ï¿½ï¿½ ï¿½Ð±ï¿½
         List<Dictionary<string, object>> csvData = CSVReader.Read(csvFilePath);
 
-        // JSONÀ¸·Î º¯È¯ÇÒ °´Ã¼ »ý¼º
+        // JSONï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ï¿½ï¿½ ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½
         MapData mapData = new MapData();
         mapData.Walls = new List<List<int>>();
         mapData.Numbers = new List<List<string>>();
@@ -85,7 +85,7 @@ public class MakeJsonMapData : MonoBehaviour
             foreach (var col in row)
             {
                 string value = col.Value.ToString();
-                if (value == "1")  // º®
+                if (value == "1")  // ï¿½ï¿½
                 {
                     wallRow.Add(1);
                     numberRow.Add("");
@@ -95,7 +95,7 @@ public class MakeJsonMapData : MonoBehaviour
                     gateRow.Add("");
                     allOperatorRow.Add("");
                 }
-                else if (value == "0")  // ¹è°æ
+                else if (value == "0")  // ï¿½ï¿½ï¿½
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -105,7 +105,7 @@ public class MakeJsonMapData : MonoBehaviour
                     gateRow.Add("");
                     allOperatorRow.Add("");
                 }
-                else if (value.StartsWith("3_"))  // ¼ýÀÚ
+                else if (value.StartsWith("3_"))  // ï¿½ï¿½ï¿½ï¿½
                 {
                     wallRow.Add(0);
                     numberRow.Add(value.Split('_')[1]);
@@ -115,7 +115,7 @@ public class MakeJsonMapData : MonoBehaviour
                     gateRow.Add("");
                     allOperatorRow.Add("");
                 }
-                else if (value.StartsWith("4_") || value.StartsWith("5_") || value.StartsWith("6_") || value.StartsWith("7_"))  // ¿¬»êÀÚ
+                else if (value.StartsWith("4_") || value.StartsWith("5_") || value.StartsWith("6_") || value.StartsWith("7_"))  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -125,7 +125,7 @@ public class MakeJsonMapData : MonoBehaviour
                     gateRow.Add("");
                     allOperatorRow.Add("");
                 }
-                else if (value == "2")  // ÇÃ·¹ÀÌ¾î À§Ä¡
+                else if (value == "2")  // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½Ä¡
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -136,7 +136,7 @@ public class MakeJsonMapData : MonoBehaviour
                     allOperatorRow.Add("");
                     mapData.PlayerPosition = new Vector2(colIndex, rowIndex);
                 }
-                else if(value.StartsWith("8_"))   // ¹® À§Ä¡
+                else if(value.StartsWith("8_"))   // ï¿½ï¿½ ï¿½ï¿½Ä¡
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -148,7 +148,7 @@ public class MakeJsonMapData : MonoBehaviour
                     mapData.DoorPosition = new Vector2(colIndex, rowIndex);
                     mapData.DoorValue = int.Parse(value.Split('_')[1]);
                 }
-                else if(value.StartsWith("9_"))     // »óÀÚÀÇ À§Ä¡
+                else if(value.StartsWith("9_"))     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -158,7 +158,7 @@ public class MakeJsonMapData : MonoBehaviour
                     gateRow.Add("");
                     allOperatorRow.Add("");
                 }
-                else if (value == "T")     // Æ®·¦ÀÇ À§Ä¡
+                else if (value == "T")     // Æ®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -168,7 +168,7 @@ public class MakeJsonMapData : MonoBehaviour
                     gateRow.Add("");
                     allOperatorRow.Add("");
                 }
-                else if(value.StartsWith("G_"))     // °ÔÀÌÆ®ÀÇ À§Ä¡
+                else if(value.StartsWith("G_"))     // ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½Ä¡
                 {
                     wallRow.Add(0);
                     numberRow.Add("");
@@ -202,22 +202,22 @@ public class MakeJsonMapData : MonoBehaviour
             rowIndex++;
         }
 
-        // Json¿¡¼­ Vector2´Â Àç±ÍÂüÁ¶ ¹®Á¦°¡ »ý°Ü¼­ ·çÇÁ¸¦ ¹«½ÃÇØÁà¾ßÇÔ
+        // Jsonï¿½ï¿½ï¿½ï¿½ Vector2ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ü¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         var settings = new JsonSerializerSettings
         {
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore
         };
 
-        // JSON ÆÄÀÏ·Î ÀúÀå
+        // JSON ï¿½ï¿½ï¿½Ï·ï¿½ ï¿½ï¿½ï¿½ï¿½
         string json = JsonConvert.SerializeObject(mapData, Formatting.Indented, settings);
 
-        /* string json = JsonUtility.ToJson(mapData, true); ÀÌ°Å¾²°í½ÍÀºµ¥ ¹º°¡ Á÷·ÄÈ­ ¾ÈµÈ´ÙÇØ¼­ ¾È¾²´ÂÁßÀÔ´Ï´Ù
-         * jsonÆÄÀÏÀÌ ÇÑÁÙ·Î Âß Ãâ·ÂµÇ¾î¼­ ¾ÈÀÌ»Ú±äÇØ¿ä
+        /* string json = JsonUtility.ToJson(mapData, true); ï¿½Ì°Å¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È­ ï¿½ÈµÈ´ï¿½ï¿½Ø¼ï¿½ ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Ï´ï¿½
+         * jsonï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ù·ï¿½ ï¿½ï¿½ ï¿½ï¿½ÂµÇ¾î¼­ ï¿½ï¿½ï¿½Ì»Ú±ï¿½ï¿½Ø¿ï¿½
          */
 
         File.WriteAllText(jsonFilePath, json);
 
-        Debug.Log("DoneFileWrite : " + jsonFilePath); // Àû´Â°Ô ´À·Á¼­ È®ÀÎÇÏ´Â ÄÚµå
+        Debug.Log("DoneFileWrite : " + jsonFilePath); // ï¿½ï¿½ï¿½Â°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½Úµï¿½
     }
 }
 

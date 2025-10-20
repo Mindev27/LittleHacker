@@ -6,7 +6,7 @@ using Util;
 
 public class GameManager : MonoBehaviour
 {
-    // Áö±Ý ÁøÇàÇÏ°í ÀÖ´Â ½ºÅ×ÀÌÁö ¹× ½Ã³ª¸®¿À °»½Å
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     static public int currentScenario = 1;
     static public int currentStage = 1;
     static public int maxScenario = 3;
@@ -15,8 +15,8 @@ public class GameManager : MonoBehaviour
     static public float gridSize = 1;
     static public bool isClear = false;
 
-    public GameObject Canvas; // ÇÃ·¹ÀÌ¾î È­¸éº¸´Ù ¾Æ·¡¿¡ ·£´õ¸µ µÇ´Â UI
-    public GameObject UpperCanvas; // ÇÃ·¹ÀÌ¾î È­¸éº¸´Ù À§¿¡ ·£´õ¸µ µÇ´Â UI
+    public GameObject Canvas; // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ È­ï¿½éº¸ï¿½ï¿½ ï¿½Æ·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½ UI
+    public GameObject UpperCanvas; // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ È­ï¿½éº¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½ UI
     public GameObject UiCamera;
 
     public static Player player;
@@ -47,7 +47,7 @@ public class GameManager : MonoBehaviour
         {
             if(touchState == TouchUtil.ETouchState.Ended)
             {
-                Managers.Text.StartTalk();
+                Managers.Text.OnTouch();
             }
         }
     }
@@ -59,7 +59,7 @@ public class GameManager : MonoBehaviour
         canvas.worldCamera = Instantiate(UiCamera).GetComponent<Camera>();
     }
 
-    // °¢°¢ ½ºÅ©¸³Æ® Initialized ÇÔ¼ö¸¦ ¸ð¾Æ¼­ ½ÇÇà½ÃÅ³¿¹Á¤
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å©ï¿½ï¿½Æ® Initialized ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Å³ï¿½ï¿½ï¿½ï¿½
     public static void StageClear()
     {
         isClear = false;
