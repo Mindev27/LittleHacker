@@ -155,7 +155,7 @@ public class MapCreate : MonoBehaviour
                         case "-":
                             operatorObj = Instantiate(renderObj[5], new Vector3(renderPos.x, renderPos.y, -1), Quaternion.identity, mapBox.transform);
                             break;
-                        case "x":
+                        case "*":
                             operatorObj = Instantiate(renderObj[6], new Vector3(renderPos.x, renderPos.y, -1), Quaternion.identity, mapBox.transform);
                             break;
                         case "/":

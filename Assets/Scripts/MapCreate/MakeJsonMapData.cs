@@ -24,7 +24,7 @@ public class MakeJsonMapData : MonoBehaviour
             // Debug.Log("csvFile: " + csvFile);
 
             // ������ ��ü ��ο��� ���� �̸��� ���� (Ȯ���� ����)
-            string fileName = csvFile.Split('\\')[1].Split('.')[0];
+            string fileName = Path.GetFileNameWithoutExtension(csvFile);
 
             // Debug.Log("CSV File Name: " + fileName);
 
