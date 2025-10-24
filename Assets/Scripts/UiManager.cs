@@ -19,7 +19,7 @@ public class UiManager : MonoBehaviour
 
     public void Update()
     {
-        // 1-1 ���������� �ر�
+        // 1-1 ���������� �ر�
         if (Input.GetKeyDown(KeyCode.K))
         {
             for(int Sn = 1; Sn <= GameManager.maxScenario; Sn++)
@@ -33,7 +33,7 @@ public class UiManager : MonoBehaviour
             Initialized();
         }
 
-        // ��� �������� �ر�
+        // ��� �������� �ر�
         if (Input.GetKeyDown(KeyCode.L))
         {
             for (int Sn = 1; Sn <= GameManager.maxScenario; Sn++)
@@ -65,11 +65,13 @@ public class UiManager : MonoBehaviour
         {
             for (int St = 1; St <= GameManager.maxStaage; St++)
             {
-                if (PlayerPrefs.GetInt("" + Sn + "-" + St) == 1)
+                // PlayerPrefs 값: 0=잠김, 1=해금됨, 2=클리어 완료
+                // 1 이상이면 플레이 가능 (해금됨 또는 클리어됨)
+                if (PlayerPrefs.GetInt("" + Sn + "-" + St) >= 1)
                 {
                     snArray[Sn - 1].transform.GetChild(St - 1).GetComponent<Image>().sprite = unLockSprite;
                 }
-                else if (PlayerPrefs.GetInt("" + Sn + "-" + St) == 0)
+                else
                 {
                     snArray[Sn - 1].transform.GetChild(St - 1).GetComponent<Image>().sprite = lockSprite;
                 }
@@ -82,7 +84,10 @@ public class UiManager : MonoBehaviour
         PlayerPrefs.DeleteKey("SN");
         PlayerPrefs.DeleteKey("ST");
         GameObject currentStObject = EventSystem.current.currentSelectedGameObject;
-        if(PlayerPrefs.GetInt(currentStObject.transform.GetChild(0).GetComponent<TMP_Text>().text) == 1)
+
+        // PlayerPrefs 값: 0=잠김, 1=해금됨, 2=클리어 완료
+        // 1 이상이면 플레이 가능
+        if(PlayerPrefs.GetInt(currentStObject.transform.GetChild(0).GetComponent<TMP_Text>().text) >= 1)
         {
             string[] selectStage = currentStObject.transform.GetChild(0).GetComponent<TMP_Text>().text.Split("-");
             PlayerPrefs.SetInt("SN", int.Parse(selectStage[0]));

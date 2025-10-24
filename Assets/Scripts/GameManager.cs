@@ -60,12 +60,21 @@ public class GameManager : MonoBehaviour
     }
 
     // ���� ��ũ��Ʈ Initialized �Լ��� ��Ƽ� �����ų����
+    // 스테이지 클리어 시 호출되는 함수
     public static void StageClear()
     {
         isClear = false;
-        currentStage++;
+
+        // 현재 스테이지를 "클리어 완료" 상태로 설정
+        // PlayerPrefs 값의 의미: 0=잠김, 1=해금됨, 2=클리어 완료
+        PlayerPrefs.SetInt("" + currentScenario.ToString() + "-" + currentStage.ToString(), 2);
+
+        currentStage++;  // 다음 스테이지로 이동 (예: 1 → 2)
+
+        // 다음 스테이지를 "해금됨" 상태로 설정
         PlayerPrefs.SetInt("" + currentScenario.ToString() + "-" + currentStage.ToString(), 1);
+
+        // MapCreate.RenderMap()에서 이미 StartTalk()를 호출하므로 여기서는 호출하지 않음
         mapCreate.Initialize("SN_" + currentScenario.ToString() + "_ST_" + currentStage.ToString());
-        Managers.Text.StartTalk();
     }
 }

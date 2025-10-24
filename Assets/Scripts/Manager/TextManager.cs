@@ -15,7 +15,7 @@ public class TextManager
 
     // UI 및 출력 제어
     private TMP_Text textPrintBox;
-    private float textPrintSpeed = 0.1f;
+    private float textPrintSpeed = 0.03f;  // 텍스트 출력 속도 (0.1f → 0.05f로 2배 빠르게)
     private bool isPrint = false;
     private bool isSkipText = false;
 
@@ -33,7 +33,12 @@ public class TextManager
     private bool CheckStageCleared()
     {
         string key = GameManager.currentScenario + "-" + GameManager.currentStage;
-        return PlayerPrefs.HasKey(key);
+
+        // PlayerPrefs 값의 의미:
+        // - 0: 잠김
+        // - 1: 해금됨 (플레이 가능, 스토리 스킵 불가)
+        // - 2: 클리어 완료 (스토리 스킵 가능)
+        return PlayerPrefs.GetInt(key, 0) == 2;
     }
 
     // 스토리 텍스트 선택 및 로드
@@ -144,6 +149,11 @@ public class TextManager
         isTalk = false;
         if (textPrintBox != null) textPrintBox.text = "";
 
+        // 대화 데이터 초기화 - 다음 스토리를 위해 반드시 필요
+        currentTexts.Clear();
+        currentSpeakers.Clear();
+        currentTextCount = 0;
+
         if (GameManager.isClear)
         {
             GameManager.isClear = false;
@@ -194,6 +204,6 @@ public class TextManager
         }
 
         isPrint = false;
-        textPrintSpeed = 0.1f;  // 속도 리셋
+        textPrintSpeed = 0.03f;  // 속도 리셋
     }
 }
