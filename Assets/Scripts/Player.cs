@@ -212,6 +212,7 @@ public class Player : MonoBehaviour
         PlayerGetItem();
         RaycastHit2D hitWall = Physics2D.Raycast(transform.position, moveDir, 0.6f, layerMask); // ��
         RaycastHit2D hitDoor = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Door")); // ��
+        RaycastHit2D hitGate = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Gate")); // 게이트
         RaycastHit2D hitTrigger = Physics2D.Raycast(transform.position, moveDir, 0.6f, LayerMask.GetMask("Trigger")); // �ڽ�
 
         // player�� ������ �����̰� �ϴ� ��
@@ -261,6 +262,18 @@ public class Player : MonoBehaviour
             }
         }
 
+        // 게이트 처리 - 조건 만족 시 통과, 불만족 시 막힘
+        if (hitGate)
+        {
+            // 현재 숫자가 게이트 숫자와 일치하지 않거나 계산이 완료되지 않았으면 막힘
+            if (hitGate.transform.GetComponent<ObjectData>().num != formulaTotalNum || formulaCount % 3 != 1)
+            {
+                moveStart = false;
+                transform.position = new Vector2(hitGate.transform.position.x - moveDir.x, hitGate.transform.position.y - moveDir.y);
+            }
+            // 조건 만족 시 통과 (아무것도 안 함)
+        }
+
         // Turn ended
         if (moveStart == false)
         {
@@ -268,6 +281,9 @@ public class Player : MonoBehaviour
             moveStart = true;
             snapshotSavedThisTurn = false;  // 다음 턴을 위해 플래그 리셋
             moveDirs.RemoveAt(0);
+
+            // 모든 Gate 스프라이트 업데이트
+            UpdateGateSprites();
         }
 
     }
@@ -577,5 +593,24 @@ public class Player : MonoBehaviour
         moveStart = false;
 
         Debug.Log($"Map restored to turn {GameManager.playerTurn}");
+    }
+
+    // 모든 Gate의 스프라이트를 현재 formulaTotalNum에 맞게 업데이트
+    void UpdateGateSprites()
+    {
+        // 씬에 있는 모든 Gate 찾기
+        GameObject[] allGates = GameObject.FindGameObjectsWithTag("Gate");
+
+        foreach (GameObject gateObj in allGates)
+        {
+            ObjectData gateData = gateObj.GetComponent<ObjectData>();
+            if (gateData == null) continue;
+
+            // 조건 확인: 현재 숫자가 게이트 숫자와 일치하고 계산이 완료되었는지
+            bool isOpen = (gateData.num == formulaTotalNum && formulaCount % 3 == 1);
+
+            // 스프라이트 변경
+            gateData.SetGateOpen(isOpen);
+        }
     }
 }
